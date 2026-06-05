@@ -1,0 +1,444 @@
+/* ================================================================
+   ModernGantt.css — Kinetic Terminal Theme (JetBrains Mono / #0f0f0f)
+   ================================================================ */
+
+/* ── Wrapper & Section Title (same style as app) ── */
+.modern-gantt-wrapper {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: var(--text-primary);
+  margin-top: 16px;
+}
+
+.mg-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #d4ff00;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mg-section-title::before {
+  content: '//';
+  color: #4b4b4b;
+  font-size: 11px;
+}
+
+/* ── Main Container ── */
+.modern-gantt-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px 22px;
+  overflow-x: auto;
+  min-width: 600px;
+}
+
+/* ── Timeline Header ── */
+.modern-gantt-header {
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+}
+
+.mg-col-label {
+  width: 120px;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.mg-timeline-header {
+  flex-grow: 1;
+  position: relative;
+  height: 24px;
+}
+
+.mg-time-tick {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b6b6b;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.mg-time-tick::after {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 8px;
+  background: #2a2a2a;
+}
+
+/* ── Rows ── */
+.mg-rows-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mg-row-label {
+  width: 110px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mg-row-label-badge {
+  background: var(--bg-secondary);
+  border: 1px solid #2a2a2a;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-align: center;
+  width: 100%;
+}
+
+/* ── Track ── */
+.mg-timeline-track {
+  flex-grow: 1;
+  height: 42px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  position: relative;
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+}
+
+.mg-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-light);
+  z-index: 0;
+}
+
+.mg-track-empty-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #2a2a2a;
+  font-weight: 700;
+}
+
+/* ── Blocks ── */
+.mg-block {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  z-index: 1;
+  letter-spacing: 0.3px;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.mg-block:hover {
+  filter: brightness(1.2);
+  transform: scaleY(1.06);
+  z-index: 5;
+}
+
+.mg-block-icon { font-size: 11px; flex-shrink: 0; }
+.mg-block-text { overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Status Colors — aligned to existing gantt palette ── */
+.mg-status-chargement {
+  background: #1c4a1c;
+  border-left: 3px solid #90EE90;
+  color: #90EE90;
+}
+
+.mg-status-acc_prep {
+  background: #4a3800;
+  border-left: 3px solid #FFD700;
+  color: #FFD700;
+}
+
+.mg-status-finition {
+  background: #3a2200;
+  border-left: 3px solid #FF8C00;
+  color: #FF8C00;
+}
+
+.mg-status-cte_fc {
+  background: #0d1e4a;
+  border-left: 3px solid #4169E1;
+  color: #7ca3ff;
+}
+
+.mg-status-attente_axe {
+  background: #252015;
+  border-left: 3px solid #FFFFE0;
+  color: #FFFFE0;
+}
+
+.mg-status-attente_quai {
+  background: #2a1f0d;
+  border-left: 3px solid #FFDEAD;
+  color: #FFDEAD;
+}
+
+.mg-status-reaccostage {
+  background: #3a3000;
+  border-left: 3px solid #FFD700;
+  color: #e5c700;
+}
+
+.mg-status-stock_epuise {
+  background: #4a2500;
+  border-left: 3px solid #ff8c00;
+  color: #ff8c00;
+}
+
+.mg-status-rade {
+  background: repeating-linear-gradient(
+    -45deg,
+    #1a1a1a,
+    #1a1a1a 5px,
+    #141414 5px,
+    #141414 10px
+  );
+  border-left: 3px solid #374151;
+  color: #6b6b6b;
+}
+
+/* ── Legend ── */
+.mg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.mg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #6b6b6b;
+}
+
+.mg-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* ── Modal Overlay ── */
+.mg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: mg-fade-in 0.15s ease-out;
+}
+
+@keyframes mg-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mg-modal-card {
+  background: var(--bg-card);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  width: 420px;
+  max-width: 92vw;
+  box-shadow: 0 0 0 1px rgba(212,255,0,0.04), 0 25px 60px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  animation: mg-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mg-slide-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal Header */
+.mg-modal-top {
+  padding: 18px 20px 14px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mg-modal-vessel-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0 0 4px 0;
+}
+
+.mg-modal-vessel-sub {
+  font-size: 10px;
+  color: #6b6b6b;
+  letter-spacing: 1px;
+}
+
+.mg-status-badge {
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.mg-modal-close {
+  background: var(--bg-card);
+  border: 1px solid #2a2a2a;
+  color: #6b6b6b;
+  font-size: 14px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.mg-modal-close:hover {
+  background: #2a2a2a;
+  color: var(--text-primary);
+  border-color: #d4ff00;
+}
+
+/* Modal Body */
+.mg-modal-body {
+  padding: 18px 20px;
+}
+
+.mg-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mg-stat-box {
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mg-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6b6b6b;
+}
+
+.mg-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0f0f0;
+}
+
+.mg-stat-value.accent  { color: #d4ff00; }
+.mg-stat-value.green   { color: #90EE90; }
+.mg-stat-value.orange  { color: #FF8C00; }
+.mg-stat-value.blue    { color: #4169E1; }
+
+/* Progress bar */
+.mg-progress-wrap {
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.mg-progress-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6b6b6b;
+  margin-bottom: 8px;
+}
+
+.mg-progress-track {
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.mg-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.mg-progress-times {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #4b4b4b;
+}

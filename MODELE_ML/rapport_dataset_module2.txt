@@ -1,0 +1,73 @@
+======================================================================
+  RAPPORT — DATASET D'ENTRAÎNEMENT MODULE 2
+  Détection d'Anomalies | AI Loading Planner | JPH OCP
+  Généré le : 17/04/2026 20:15
+======================================================================
+
+1. INFORMATIONS GÉNÉRALES
+────────────────────────────────────────
+   Granularité        : 1 ligne = 1 jour × 1 axe
+   Période couverte   : 01/01/2025 → 31/12/2025
+   Axes inclus        : 1, 2, 3, 4, 5, 6
+   Lignes totales     : 2,190
+   Nombre de features : 20
+
+2. DISTRIBUTION DES LABELS
+────────────────────────────────────────
+   Label 0 (Normal)   : 1,484  (67.8%)
+   Label 1 (Anomalie) : 706  (32.2%)
+   Ratio N/A          : 2.1:1
+   Recommandation     : class_weight
+
+3. TYPES D'ANOMALIES (base arrêts bruts)
+────────────────────────────────────────
+   Épuisement de stock  : 613
+   Rupture de bande     : 24
+   Défaut électrique    : 643
+   Défaut mécanique     : 134
+
+4. TEST χ² : ANOMALIE × HEURE
+────────────────────────────────────────
+   χ² = 7.525  |  ddl = 3  |  p = 0.0569
+   Résultat : Non significatif (α=5%)
+
+5. LISTE DES COLONNES DU DATASET
+────────────────────────────────────────
+   01. Date
+   02. axe
+   03. mois
+   04. jour_sem
+   05. semaine
+   06. nb_arrets_total
+   07. duree_totale_h
+   08. duree_max_h
+   09. taux_disponibilite
+   10. ratio_arret_anomalie
+   11. roll_3j_nb_arrets
+   12. roll_7j_nb_arrets
+   13. roll_3j_duree
+   14. roll_7j_duree
+   15. roll_7j_nb_anomalie
+   16. pente_arrets_3j
+   17. duree_depuis_last_arret
+   18. duree_depuis_last_anomalie
+   19. cumul_arrets_7j
+   20. heure_sin
+   21. heure_cos
+   22. mois_sin
+   23. mois_cos
+   24. est_weekend
+   25. axe_encoded
+   26. nb_arrets_anomalie
+   27. duree_anomalie_h
+   28. nb_epuisement
+   29. nb_rupture
+   30. nb_defaut_elec
+   31. nb_defaut_mec
+   32. gravite_max
+   33. nb_arrets_critiques
+   34. label
+
+======================================================================
+  FIN DU RAPPORT
+======================================================================
