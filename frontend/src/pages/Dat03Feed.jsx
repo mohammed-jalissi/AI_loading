@@ -41,22 +41,22 @@ const DATASETS = [
     hashKey: 'Date + Axe + Début + Fin',
   },
   {
-    id: 'kpi',
+    id: 'trg',
     icon: '📊',
-    title: 'KPI Axes 2025',
-    table: 'kpi_axes_2025',
-    endpoint: '/dat03/upload_kpi_axes',
-    statKey: 'kpi',
+    title: 'TRG par axe 2025',
+    table: 'trg_axes_2025',
+    endpoint: '/dat03/upload_trg_axes',
+    statKey: 'trg',
     color: '#0ea5e9',
-    description: 'KPI hebdomadaires par axe (TRG, MTBF, disponibilité…)',
+    description: 'TRG hebdomadaire par axe et tonnage total chargé',
     accept: '.xlsx,.xls',
     schema: [
-      { col: 'Feuille = nom axe', type: 'SHEET', req: true },
-      { col: 'Ligne A = indicateur', type: 'TEXT', req: true },
-      { col: 'Col 1..52 = semaines', type: 'FLOAT', req: true },
-      { col: 'Réalisé 2023 / YTD', type: 'FLOAT', req: false },
+      { col: 'Date', type: 'DATE', req: true },
+      { col: 'Semaine', type: 'INT', req: true },
+      { col: 'Axe 1 à 6', type: 'FLOAT', req: false },
+      { col: 'TOTAL Chargé', type: 'FLOAT', req: false },
     ],
-    hashKey: 'Axe + Indicateur + Semaine',
+    hashKey: 'Date + Semaine',
   },
   {
     id: 'export',
@@ -340,7 +340,7 @@ function DatasetCard({ dataset, dbCount, onRefresh }) {
 
 // ── Page principale Dat03Feed ───────────────────────────────────────────────
 export default function Dat03Feed() {
-  const [stats, setStats] = useState({ arrets: 0, kpi: 0, export: 0 });
+  const [stats, setStats] = useState({ arrets: 0, trg: 0, export: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [supaConnected, setSupaConnected] = useState(null);
 
@@ -363,7 +363,7 @@ export default function Dat03Feed() {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  const totalRows = (stats.arrets ?? 0) + (stats.kpi ?? 0) + (stats.export ?? 0);
+  const totalRows = (stats.arrets ?? 0) + (stats.trg ?? 0) + (stats.export ?? 0);
 
   return (
     <div className="dat03-page">
@@ -396,8 +396,8 @@ export default function Dat03Feed() {
           </div>
           <div className="dat03-stat-divider" />
           <div className="dat03-stat-pill">
-            <div className="dat03-stat-value" style={{ color: '#0ea5e9' }}>{statsLoading ? '…' : stats.kpi.toLocaleString()}</div>
-            <div className="dat03-stat-label">KPI</div>
+            <div className="dat03-stat-value" style={{ color: '#0ea5e9' }}>{statsLoading ? '…' : stats.trg.toLocaleString()}</div>
+            <div className="dat03-stat-label">TRG</div>
           </div>
           <div className="dat03-stat-divider" />
           <div className="dat03-stat-pill">

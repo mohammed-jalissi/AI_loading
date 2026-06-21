@@ -102,7 +102,7 @@ export default function VesselInput({ dataMode = 'LOCAL' }) {
       showToast(`Navire "${form.nom}" enregistré avec succès`);
       setForm({ ...EMPTY_FORM, lots: [{ ...EMPTY_LOT }] });
       setShowForm(false);
-      await loadVessels();
+      await fetchVessels();
     } catch {
       showToast('Erreur lors de la création du navire', 'error');
     } finally {
@@ -115,7 +115,7 @@ export default function VesselInput({ dataMode = 'LOCAL' }) {
     try {
       await api.clearCustomVessels();
       showToast('Navires custom effacés');
-      await loadVessels();
+      await fetchVessels();
     } catch {
       showToast('Erreur suppression', 'error');
     } finally {

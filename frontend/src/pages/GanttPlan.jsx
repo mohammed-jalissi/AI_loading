@@ -32,11 +32,6 @@ export default function GanttPlan({ data, meteo, weeklyMeteo, healthData, params
 
   const handleMouseUp = useCallback(() => { isDragging.current = false; }, []);
 
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    setZoom(z => Math.min(4, Math.max(0.5, z - e.deltaY * 0.001)));
-  }, []);
-
   const resetView = () => {
     imgPosRef.current = { x: 0, y: 0 };
     setImgPos({ x: 0, y: 0 });
@@ -163,7 +158,6 @@ export default function GanttPlan({ data, meteo, weeklyMeteo, healthData, params
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
         >
           {/* Grid */}
           <div style={{
@@ -235,7 +229,7 @@ export default function GanttPlan({ data, meteo, weeklyMeteo, healthData, params
             padding: '4px 10px', borderRadius: '4px',
             fontSize: '9px', color: '#4b5563', fontFamily: 'monospace', letterSpacing: '1px', pointerEvents: 'none',
           }}>
-            DRAG TO PAN · SCROLL TO ZOOM
+            DRAG TO PAN · USE +/- TO ZOOM
           </div>
 
           {cartoFullscreen && (

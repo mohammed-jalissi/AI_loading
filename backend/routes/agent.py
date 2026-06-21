@@ -41,8 +41,8 @@ Analyze the message and return ONLY a valid JSON, without markdown or explanatio
 JSON Structure:
 {
   "intent": "question_general" | "question_jph" | "action",
-  "topic": "quais" | "halls" | "convoyeurs" | "network" | "qualites" | "planification" | "contraintes" | "dataset" | "navires" | "anomalie" | "meteo" | "app" | "stocks" | "general" | "cartographie" | "kpi" | "arrets" | "exports",
-  "action_type": null | "run_planning" | "run_benchmark" | "run_simulation" | "get_network_path" | "get_stock_level" | "show_cartography" | "get_kpi_dashboard" | "get_pareto_arrets" | "get_export_dashboard" | "get_arrets_axe" | "route_to_agent" | "show_journal" | "launch_roundtable" | "reset",
+  "topic": "quais" | "halls" | "convoyeurs" | "network" | "qualites" | "planification" | "contraintes" | "dataset" | "navires" | "anomalie" | "meteo" | "app" | "stocks" | "general" | "cartographie" | "trg" | "arrets" | "exports",
+  "action_type": null | "run_planning" | "run_benchmark" | "run_simulation" | "get_network_path" | "get_stock_level" | "show_cartography" | "get_trg_dashboard" | "get_pareto_arrets" | "get_export_dashboard" | "get_arrets_axe" | "route_to_agent" | "show_journal" | "launch_roundtable" | "reset",
   "params": {
     "algo": null | "greedy" | "genetic" | "milp" | "sa" | "ts",
     "horizon": null,
@@ -73,7 +73,7 @@ Routing Rules for Agent OPT-01 (Flow Strategist):
 - If user asks for a benchmark, to compare algorithms (MILP vs Heuristic) → action_type = "run_benchmark"
 
 Routing Rules for Agent DAT-03 (Data Analyst):
-- If user asks for OEE (TRG), KPIs, performance indicators by axis or week → action_type = "get_kpi_dashboard", params.axe_filter = axis name, params.indicateur_filter = indicator name
+- If user asks for OEE (TRG), performance indicators by axis or week → action_type = "get_trg_dashboard", params.axe_filter = axis name
 - If user asks to analyze downtime causes, failures, Pareto, MTBF, MTTR → action_type = "get_pareto_arrets", params.axe_filter = axis name
 - If user asks for exports, vessels, tonnage, destinations, clients → action_type = "get_export_dashboard"
 - If user asks for specific axis downtime (e.g., "downtime axis 3") → action_type = "get_arrets_axe", params.axe_filter = axis name
@@ -81,7 +81,7 @@ Routing Rules for Agent DAT-03 (Data Analyst):
 Routing Rules for Agent ORC-05 (Orchestrator):
 - If user asks to plan, optimize, launch MILP/GA/benchmark/Gantt → action_type = "route_to_agent", params.target_agent = "OPT-01"
 - If user asks to analyze anomalies, vibrations, failures, simulations → action_type = "route_to_agent", params.target_agent = "ANL-02"
-- If user asks for KPIs, OEE, Pareto, downtime, exports, stats → action_type = "route_to_agent", params.target_agent = "DAT-03"
+- If user asks for TRG, OEE, Pareto, downtime, exports, stats → action_type = "route_to_agent", params.target_agent = "DAT-03"
 - If user asks for network path, stocks, cartography, infrastructure → action_type = "route_to_agent", params.target_agent = "INF-04"
 - If user asks for the journal, conversation history, agent logs → action_type = "show_journal"
 - If user asks for a roundtable, global status, meeting, status of all agents → action_type = "launch_roundtable"
@@ -100,6 +100,8 @@ class ChatRequest(BaseModel):
     metrics: Optional[dict] = None
     agent_id: Optional[str] = None
     groq_api_key: Optional[str] = None
+    operator_name: Optional[str] = None
+    operator_role: Optional[str] = None
 
 class FeedbackRequest(BaseModel):
     agent_id: str
@@ -152,16 +154,16 @@ YOU HAVE ACCESS TO THESE 3 DATASETS IN SUPABASE:
    Key columns: date, axe, debut (start), fin (end), duree_h (duration), cause, nature, navire, qualite, hall, quai
    → Used for: MTBF, MTTR, Pareto causes, duration by axis, vessel analysis
 
-2. TABLE kpi_axes_2025 — Performance KPI Indicators by Axis 2025
-   Key columns: axe_nom, indicateur (e.g., OEE/TRG, Availability, MTBF), semaine (week), valeur (float)
-   → Used for: OEE (TRG), availability rate, weekly benchmarks
+2. TABLE trg_axes_2025 — Performance TRG par axe 2025
+   Key columns: date, semaine, axe_1, axe_2, axe_3, axe_4, axe_5, axe_6, total_charge
+   → Used for: TRG, availability rate, weekly benchmarks
 
 3. TABLE export_2025 — 2025 Export/Vessel Base
    Key columns: navire, date_bl, tonnage_bl, qualite, famille_qualite, client, destination, valeur_usd, valeur_dh
    → Used for: top vessels, exported tonnage, revenue, destinations
 
 DASHBOARD RULES:
-- If asked for OEE/TRG or KPIs → trigger get_kpi_dashboard
+- If asked for OEE/TRG → trigger get_trg_dashboard
 - If asked for downtime causes, failures, MTBF, MTTR → trigger get_pareto_arrets
 - If asked for exports, vessels, clients, destinations → trigger get_export_dashboard
 - If asked for specific axis downtime → trigger get_arrets_axe
@@ -172,7 +174,7 @@ Your domain: the complete physical graph of the port (conveyors, scrapers, halls
 You master Dijkstra algorithms applied to the port logistics network.
 When a user asks for a path between two points, you analyze the network and provide the optimal route with each traversed node.
 When asked about stocks, you check real-time current levels.
-When asked for cartography, you display the port map (CARTO.png).
+When asked for cartography, you MUST reply EXACTLY: "THIS IS THE CARTHOGRAPHY"
 Reply in ENGLISH, with technical precision and a professional infrastructure expert tone.""",
     "ORC-05": """You are ORC-05, the Orchestrator — Chief of the JPH Roundtable · OCP Jorf Lasfar.
 You coordinate the 4 specialized agents and have a global vision of the port system.
@@ -180,7 +182,7 @@ You coordinate the 4 specialized agents and have a global vision of the port sys
 YOUR AGENTS UNDER COORDINATION:
 - OPT-01 (Flow Strategist): MILP/GA Optimization, Gantt planning, benchmarks
 - ANL-02 (Reliability Analyst): ML, anomaly detection, failure simulations
-- DAT-03 (The Statistician): KPIs, OEE (TRG), downtime Pareto, exports, historical analyses
+- DAT-03 (The Statistician): TRG, OEE, downtime Pareto, exports, historical analyses
 - INF-04 (Infrastructure Engineer): JPH Network, Dijkstra paths, stocks, cartography
 
 YOUR CAPABILITIES:
@@ -307,20 +309,6 @@ def _call_groq(messages, api_key, temperature=0.3, max_tokens=1024, fast_mode=Fa
             
     return "❌ Erreur API (Quota dépassé ou APIs non configurées pour tous les modèles)."
     
-    # All Groq models failed
-    if gemini_key:
-        print("[FALLBACK] Tous les modèles Groq ont échoué. Tentative via Gemini...")
-        result = _call_gemini(messages, gemini_key, temperature, max_tokens)
-        if result:
-            return result
-            
-    if xai_key:
-        print("[FALLBACK] Gemini a échoué. Tentative via xAI (Grok)...")
-        result = _call_xai(messages, xai_key, temperature, max_tokens)
-        if result:
-            return result
-            
-    return f"❌ Erreur API (Quota dépassé pour tous les modèles) : {last_error}"
 
 import re
 import heapq
@@ -333,35 +321,51 @@ def _fallback_intent_detection(message: str, agent_id: str = None) -> dict:
     horizon_match = re.search(r'(\d+)\s*(?:h|heures?|hours?)', msg)
     horizon = int(horizon_match.group(1)) if horizon_match else None
     
-    # Planning / Gantt keywords
-    planning_kw = ['genere', 'génère', 'générer', 'generer', 'planifi', 'plan de charge',
-                   'gantt', 'optimise', 'optimizer', 'lancer le plan', 'créer un plan',
-                   'creer un plan', 'lance le plan', 'plan sur', 'charge des navires',
-                   'plan de chargement', 'planification', 'generate', 'plan', 'optimize', 'loading plan']
-    
-    benchmark_kw = ['benchmark', 'comparer', 'comparatif', 'compare les algo', 'compare']
-    
-    simulation_kw = ['simul', 'panne', 'blocage', 'scénario', 'scenario', 'simulate', 'failure', 'weather', 'alert']
-    
-    for kw in planning_kw:
-        if kw in msg:
-            params = {"algo": "greedy", "horizon": horizon or 48, "lambda_pen": 0.8, "data_mode": "LOCAL", "warm_start": True}
-            # Detect algo from message
-            if any(a in msg for a in ['milp', 'lp', 'linéaire', 'lineaire']): params["algo"] = "milp"
-            elif any(a in msg for a in ['genetic', 'génétique', 'genetique', 'ga']): params["algo"] = "genetic"
-            elif any(a in msg for a in ['recuit', 'sa', 'simulated annealing']): params["algo"] = "sa"
-            elif any(a in msg for a in ['tabou', 'tabu', 'ts']): params["algo"] = "ts"
-            return {"intent": "action", "topic": "planification", "action_type": "run_planning", "params": params, "confidence": 0.9}
-    
-    for kw in benchmark_kw:
-        if kw in msg:
-            return {"intent": "action", "topic": "planification", "action_type": "run_benchmark", "params": {"horizon": horizon or 48}, "confidence": 0.9}
+    if agent_id in ['OPT-01', None]:
+        # Planning / Gantt keywords
+        planning_kw = ['genere', 'génère', 'générer', 'generer', 'planifi', 'plan de charge',
+                       'gantt', 'optimise', 'optimizer', 'lancer le plan', 'créer un plan',
+                       'creer un plan', 'lance le plan', 'plan sur', 'charge des navires',
+                       'plan de chargement', 'planification', 'generate', 'plan', 'optimize', 'loading plan']
+        
+        benchmark_kw = ['benchmark', 'comparer', 'comparatif', 'compare les algo', 'compare']
+        
+        for kw in planning_kw:
+            if kw in msg:
+                params = {"algo": "greedy", "horizon": horizon or 48, "lambda_pen": 0.8, "data_mode": "LOCAL", "warm_start": True}
+                # Detect algo from message
+                if any(a in msg for a in ['milp', 'lp', 'linéaire', 'lineaire']): params["algo"] = "milp"
+                elif any(a in msg for a in ['genetic', 'génétique', 'genetique', 'ga']): params["algo"] = "genetic"
+                elif any(a in msg for a in ['recuit', 'sa', 'simulated annealing']): params["algo"] = "sa"
+                elif any(a in msg for a in ['tabou', 'tabu', 'ts']): params["algo"] = "ts"
+                return {"intent": "action", "topic": "planification", "action_type": "run_planning", "params": params, "confidence": 0.9}
+        
+        for kw in benchmark_kw:
+            if kw in msg:
+                return {"intent": "action", "topic": "planification", "action_type": "run_benchmark", "params": {"horizon": horizon or 48}, "confidence": 0.9}
     
     if agent_id == 'ANL-02':
+        simulation_kw = ['simul', 'panne', 'blocage', 'scénario', 'scenario', 'simulate', 'failure', 'weather', 'alert']
         for kw in simulation_kw:
             if kw in msg:
                 return {"intent": "action", "topic": "planification", "action_type": "run_simulation", "params": {"horizon": horizon or 48}, "confidence": 0.8}
-    
+                
+    if agent_id == 'DAT-03':
+        if any(kw in msg for kw in ['pareto', 'arrêts', 'arret', 'cause', 'panne']):
+            return {"intent": "action", "topic": "arrets", "action_type": "get_pareto_arrets", "params": {}, "confidence": 0.9}
+        if any(kw in msg for kw in ['export', 'navire', 'destination', 'qualité']):
+            return {"intent": "action", "topic": "export", "action_type": "get_export_dashboard", "params": {}, "confidence": 0.9}
+        if any(kw in msg for kw in ['trg', 'oee', 'kpi', 'performance', 'taux de réalisation', 'taux']):
+            return {"intent": "action", "topic": "trg", "action_type": "get_trg_dashboard", "params": {}, "confidence": 0.9}
+            
+    if agent_id == 'ORC-05':
+        if any(kw in msg for kw in ['roundtable', 'table ronde', 'réunion', 'reunion', 'resume']):
+            return {"intent": "action", "topic": "roundtable", "action_type": "launch_roundtable", "params": {}, "confidence": 0.9}
+
+    if agent_id == 'INF-04':
+        if any(kw in msg for kw in ['cartography', 'cartographie', 'map', 'plan']):
+            return {"intent": "action", "topic": "cartographie", "action_type": "show_cartography", "params": {}, "confidence": 0.9}
+                
     return None  # No fallback match
 
 
@@ -451,7 +455,7 @@ def _process_action(intent_data):
     action_context = ""
 
     if action_type == "show_cartography":
-        static_response = "🗺️ **Cartographie du réseau JPH** — Affichage du plan complet du port de Jorf Lasfar."
+        static_response = "THIS IS THE CARTHOGRAPHY"
         action_obj = {"type": "show_cartography", "params": {}}
 
     elif action_type == "get_network_path":
@@ -501,27 +505,29 @@ def _process_action(intent_data):
             static_response = f"📦 Consultation du stock **{product}** en cours..."
             action_obj = {"type": "get_stock_level", "params": {"product": product, "stocks": []}}
 
-    elif action_type == "get_kpi_dashboard":
+    elif action_type == "get_trg_dashboard":
         try:
             from db_config import get_client
             sb = get_client()
-            kpi_data = []
-            axe_filter = params.get("axe_filter")
-            indicateur_filter = params.get("indicateur_filter")
+            trg_data = []
             if sb:
-                query = sb.table("kpi_axes_2025").select("axe_nom, indicateur, semaine, valeur")
-                if axe_filter: query = query.ilike("axe_nom", f"%{axe_filter}%")
-                if indicateur_filter: query = query.ilike("indicateur", f"%{indicateur_filter}%")
-                res = query.limit(500).execute()
-                kpi_data = res.data or []
-            action_context = f"[DONNÉES EXTRAITES DE kpi_axes_2025]\n"
-            for row in kpi_data[:20]:
-                action_context += f"- Axe: {row.get('axe_nom')}, Indicateur: {row.get('indicateur')}, Semaine: {row.get('semaine')}, Valeur: {row.get('valeur')}%\n"
-            if not kpi_data: action_context += "Aucune donnée trouvée."
-            action_obj = {"type": "get_kpi_dashboard", "params": {"kpi_data": kpi_data, "axe_filter": axe_filter}}
+                query = sb.table("trg_axes_2025").select("date, semaine, axe_1, axe_2, axe_3, axe_4, axe_5, axe_6, total_charge")
+                res = query.order("semaine").limit(500).execute()
+                trg_data = res.data or []
+            action_context = f"[DONNÉES EXTRAITES DE trg_axes_2025]\n"
+            for row in trg_data[:20]:
+                a1 = (row.get('axe_1') or 0) * 100
+                a2 = (row.get('axe_2') or 0) * 100
+                a3 = (row.get('axe_3') or 0) * 100
+                a4 = (row.get('axe_4') or 0) * 100
+                a5 = (row.get('axe_5') or 0) * 100
+                a6 = (row.get('axe_6') or 0) * 100
+                action_context += f"- Date: {row.get('date')}, Sem: {row.get('semaine')}, A1: {a1:.2f}%, A2: {a2:.2f}%, A3: {a3:.2f}%, A4: {a4:.2f}%, A5: {a5:.2f}%, A6: {a6:.2f}%, Total: {row.get('total_charge')}\n"
+            if not trg_data: action_context += "Aucune donnée trouvée."
+            action_obj = {"type": "get_trg_dashboard", "params": {"trg_data": trg_data}}
         except Exception as e:
-            static_response = f"📊 Erreur lors du chargement des KPI: {str(e)}"
-            action_obj = {"type": "get_kpi_dashboard", "params": {"kpi_data": []}}
+            static_response = f"📊 Erreur lors du chargement du TRG: {str(e)}"
+            action_obj = {"type": "get_trg_dashboard", "params": {"trg_data": []}}
 
     elif action_type == "get_pareto_arrets":
         try:
@@ -657,223 +663,7 @@ def chat(req: ChatRequest):
     static_response = None
 
     if intent == "action":
-        params = intent_data.get("params", {})
-        algo = (params.get("algo") or "greedy").lower()
-        action_type = intent_data.get("action_type", "run_planning")
-
-        # ── INF-04: Show Cartography ──────────────────────────────
-        if action_type == "show_cartography":
-            static_response = "🗺️ **Cartographie du réseau JPH** — Affichage du plan complet du port de Jorf Lasfar."
-            action_obj = {"type": "show_cartography", "params": {}}
-
-        # ── INF-04: Get Network Path (Dijkstra) ───────────────────
-        elif action_type == "get_network_path":
-            source = params.get("path_source") or "HE01"
-            target = params.get("path_target") or "Quai 1N"
-            try:
-                from core.config import NETWORK_GRAPH
-                import heapq
-                # Dijkstra on NETWORK_GRAPH
-                dist = {node: float('inf') for node in NETWORK_GRAPH}
-                prev = {}
-                dist[source] = 0
-                heap = [(0, source)]
-                while heap:
-                    d, u = heapq.heappop(heap)
-                    if d > dist[u]: continue
-                    for v, w in NETWORK_GRAPH.get(u, {}).items():
-                        if dist[u] + w < dist[v]:
-                            dist[v] = dist[u] + w
-                            prev[v] = u
-                            heapq.heappush(heap, (dist[v], v))
-                # Reconstruct path
-                path = []
-                node = target
-                while node in prev:
-                    path.insert(0, node)
-                    node = prev[node]
-                if node == source:
-                    path.insert(0, source)
-                total_weight = dist.get(target, -1)
-                path_str = " → ".join(path) if path else "Aucun chemin trouvé"
-                static_response = f"🔍 **Chemin optimal trouvé** : `{source}` → `{target}`\n**Route** : {path_str}\n**Poids total** : {total_weight:.1f}"
-                action_obj = {"type": "get_network_path", "params": {"source": source, "target": target, "path": path, "weight": total_weight}}
-            except Exception as e:
-                static_response = f"🔍 **Recherche de chemin** `{source}` → `{target}` en cours..."
-                action_obj = {"type": "get_network_path", "params": {"source": source, "target": target, "path": [], "weight": 0}}
-
-        # ── INF-04: Get Stock Level ───────────────────────────────
-        elif action_type == "get_stock_level":
-            product = params.get("stock_product") or "DAP"
-            try:
-                from core.config import STOCKS_FICTIFS
-                matching = [s for s in STOCKS_FICTIFS if product.upper() in s.get('qualite', '').upper()]
-                if matching:
-                    stock_info = matching[0]
-                    static_response = f"📦 **Stock {product}** — Hall: {stock_info.get('hall', '?')} | Quantité: {stock_info.get('quantite', 0):,}T | Capacité: {stock_info.get('capacite_max', 0):,}T"
-                    action_obj = {"type": "get_stock_level", "params": {"product": product, "stocks": matching}}
-                else:
-                    static_response = f"📦 Aucun stock trouvé pour **{product}**. Vérifiez le nom du produit."
-            except Exception as e:
-                static_response = f"📦 Consultation du stock **{product}** en cours..."
-                action_obj = {"type": "get_stock_level", "params": {"product": product, "stocks": []}}
-
-        # ── DAT-03: KPI Dashboard ─────────────────────────────────────
-        elif action_type == "get_kpi_dashboard":
-            try:
-                from db_config import get_client
-                sb = get_client()
-                kpi_data = []
-                axe_filter = params.get("axe_filter")
-                indicateur_filter = params.get("indicateur_filter")
-                if sb:
-                    query = sb.table("kpi_axes_2025").select("axe_nom, indicateur, semaine, valeur")
-                    if axe_filter:
-                        query = query.ilike("axe_nom", f"%{axe_filter}%")
-                    if indicateur_filter:
-                        query = query.ilike("indicateur", f"%{indicateur_filter}%")
-                    res = query.limit(500).execute()
-                    kpi_data = res.data or []
-                
-                # Context for LLM
-                action_context = f"[DONNÉES EXTRAITES DE kpi_axes_2025]\n"
-                for row in kpi_data[:20]: # send top 20 to LLM to avoid token limit
-                    action_context += f"- Axe: {row.get('axe_nom')}, Indicateur: {row.get('indicateur')}, Semaine: {row.get('semaine')}, Valeur: {row.get('valeur')}%\n"
-                if not kpi_data:
-                    action_context += "Aucune donnée trouvée pour cette requête."
-                
-                action_obj = {"type": "get_kpi_dashboard", "params": {"kpi_data": kpi_data, "axe_filter": axe_filter}}
-            except Exception as e:
-                static_response = f"📊 Erreur lors du chargement des KPI: {str(e)}"
-                action_obj = {"type": "get_kpi_dashboard", "params": {"kpi_data": []}}
-
-        # ── DAT-03: Pareto des Arrêts ─────────────────────────────────
-        elif action_type == "get_pareto_arrets":
-            try:
-                from db_config import get_client
-                sb = get_client()
-                arrets_data = []
-                axe_filter = params.get("axe_filter")
-                if sb:
-                    query = sb.table("arrets_2025").select("cause, nature, axe, duree_h, niveau1")
-                    if axe_filter:
-                        query = query.ilike("axe", f"%{axe_filter}%")
-                    res = query.limit(2000).execute()
-                    arrets_data = res.data or []
-                
-                action_context = f"[DONNÉES EXTRAITES DE arrets_2025]\n"
-                for row in arrets_data[:20]:
-                    action_context += f"- Cause: {row.get('cause')}, Nature: {row.get('nature')}, Durée: {row.get('duree_h')}h, Axe: {row.get('axe')}\n"
-                if not arrets_data:
-                    action_context += "Aucune donnée d'arrêts trouvée."
-                    
-                action_obj = {"type": "get_pareto_arrets", "params": {"arrets_data": arrets_data}}
-            except Exception as e:
-                static_response = f"📈 Erreur Pareto: {str(e)}"
-                action_obj = {"type": "get_pareto_arrets", "params": {"arrets_data": []}}
-
-        # ── DAT-03: Export Dashboard ──────────────────────────────────
-        elif action_type == "get_export_dashboard":
-            try:
-                from db_config import get_client
-                sb = get_client()
-                export_data = []
-                if sb:
-                    res = sb.table("export_2025").select(
-                        "navire, date_bl, tonnage_bl, qualite, famille_qualite, client, destination, valeur_usd, valeur_dh"
-                    ).limit(500).execute()
-                    export_data = res.data or []
-                
-                n = len(export_data)
-                tonnage = sum(r.get("tonnage_bl") or 0 for r in export_data)
-                action_context = f"[DONNÉES EXTRAITES DE export_2025]\nTotal: {n} lignes, Tonnage total exporté: {tonnage}T.\nQuelques exemples:\n"
-                for row in export_data[:10]:
-                    action_context += f"- Navire: {row.get('navire')}, Qualité: {row.get('qualite')}, Tonnage: {row.get('tonnage_bl')}T, Client: {row.get('client')}\n"
-                
-                action_obj = {"type": "get_export_dashboard", "params": {"export_data": export_data}}
-            except Exception as e:
-                static_response = f"🚢 Erreur Export Dashboard: {str(e)}"
-                action_obj = {"type": "get_export_dashboard", "params": {"export_data": []}}
-
-        # ── DAT-03: Arrêts par Axe (filtré) ──────────────────────────
-        elif action_type == "get_arrets_axe":
-            try:
-                from db_config import get_client
-                sb = get_client()
-                axe_filter = params.get("axe_filter") or ""
-                arrets_data = []
-                if sb:
-                    res = sb.table("arrets_2025").select(
-                        "date, axe, debut, fin, duree_h, cause, nature, navire, qualite"
-                    ).ilike("axe", f"%{axe_filter}%").limit(500).execute()
-                    arrets_data = res.data or []
-                
-                total_h = sum(r.get("duree_h") or 0 for r in arrets_data)
-                action_context = f"[DONNÉES EXTRAITES DE arrets_2025 pour l'axe {axe_filter}]\nTotal: {len(arrets_data)} arrêts, Durée totale: {total_h:.1f}h.\n"
-                for row in arrets_data[:15]:
-                    action_context += f"- {row.get('date')} | Durée: {row.get('duree_h')}h | Cause: {row.get('cause')}\n"
-                
-                action_obj = {"type": "get_arrets_axe", "params": {"arrets_data": arrets_data, "axe_filter": axe_filter}}
-            except Exception as e:
-                static_response = f"🔍 Erreur: {str(e)}"
-                action_obj = {"type": "get_arrets_axe", "params": {"arrets_data": [], "axe_filter": ""}}
-
-        # ── ORC-05: Route to Agent (Délégation) ──────────────────
-        elif action_type == "route_to_agent":
-            target = params.get("target_agent") or "OPT-01"
-            target_names = {"OPT-01": "Stratège Flux", "ANL-02": "Analyste Fiabilité", "DAT-03": "Le Statisticien", "INF-04": "Ingénieur Infrastructure"}
-            target_name = target_names.get(target, target)
-            static_response = f"🎯 **Délégation vers {target}** ({target_name}) — Je transfère votre demande à l'agent compétent. Ouverture du canal de communication..."
-            action_obj = {"type": "route_to_agent", "params": {"target_agent": target}}
-
-        # ── ORC-05: Show Journal ───────────────────────────────────
-        elif action_type == "show_journal":
-            static_response = "📋 **Journal Global des Agents** — Voici l'historique complet de toutes les conversations enregistrées."
-            action_obj = {"type": "show_journal", "params": {}}
-
-        # ── ORC-05: Launch Roundtable ──────────────────────────────
-        elif action_type == "launch_roundtable":
-            static_response = "🔄 **Table Ronde Lancée** — Interrogation de tous les agents en cours... Veuillez patienter."
-            action_obj = {"type": "launch_roundtable", "params": {}}
-
-        # ── Standard planning/benchmark/simulation actions ─────────
-        elif action_type == "run_benchmark":
-            action_obj = {
-                "type": "run_benchmark",
-                "params": {
-                    "algo": algo,
-                    "horizon": params.get("horizon") or 48,
-                    "lambda_pen": params.get("lambda_pen") or 0.8,
-                    "data_mode": params.get("data_mode") or "LOCAL",
-                    "warm_start": params.get("hybridization", False)
-                }
-            }
-            static_response = f"✅ **Comparative Benchmark** launched — Algorithms: Greedy, GA, SA, TS\nMetaheuristics | Auto-tune: {'Yes' if params.get('autotune') else 'No'} | Hybridization: {'Yes' if params.get('hybridization') else 'No'}"
-        elif action_type == "run_simulation":
-            scenario_type = params.get("scenario_type")
-            target = params.get("scenario_target")
-            action_obj = {
-                "type": "run_simulation",
-                "params": {
-                    "scenario_type": scenario_type,
-                    "scenario_target": target,
-                    "algo": algo,
-                    "horizon": params.get("horizon") or 48
-                }
-            }
-            static_response = f"🚨 **Reliability Alert (ANL-02)** — Simulation of a critical scenario (`{scenario_type}`) on `{target}`. Recalculating plan..."
-        else:
-            action_obj = {
-                "type": "run_planning",
-                "params": {
-                    "algo": algo,
-                    "horizon": params.get("horizon") or 48,
-                    "lambda_pen": params.get("lambda_pen") or 0.8,
-                    "data_mode": params.get("data_mode") or "LOCAL",
-                    "warm_start": True
-                }
-            }
-            static_response = f"✅ **Planning Launched** — Algorithm: `{algo.upper()}` | Horizon: {params.get('horizon') or 48}h | λ={params.get('lambda_pen') or 0.8} | Mode: {params.get('data_mode') or 'LOCAL'}"
+        action_obj, static_response, action_context = _process_action(intent_data)
 
         if static_response:
             return {
@@ -894,7 +684,9 @@ def chat(req: ChatRequest):
 
     # Set system prompt based on agent_id
     persona_intro = PERSONAS.get(req.agent_id, EXPERT_SYSTEM)
-    system = f"{persona_intro}\nReply in ENGLISH, clearly, structurally, and professionally."
+    
+    operator_context = f"\n\n[CONTEXTE OPÉRATEUR ASSIGNÉ]\nL'utilisateur actuel qui te parle est {req.operator_name} (Rôle: {req.operator_role}). Prends en compte son rôle dans tes réponses si c'est pertinent." if req.operator_name else ""
+    system = f"{persona_intro}{operator_context}\nReply in ENGLISH, clearly, structurally, and professionally."
     
     if kb_context:
         system += f"\n\n--- DONNÉES JPH ---\n{kb_context}"
@@ -998,7 +790,9 @@ def chat_stream(req: ChatRequest):
         # 3. Stream expert response
         kb_context = get_relevant_kb(topic)
         persona_intro = PERSONAS.get(req.agent_id, EXPERT_SYSTEM)
-        system = f"{persona_intro}\nReply in ENGLISH, clearly, structurally, and professionally."
+        
+        operator_context = f"\n\n[CONTEXTE OPÉRATEUR ASSIGNÉ]\nL'utilisateur actuel qui te parle est {req.operator_name} (Rôle: {req.operator_role}). Prends en compte son rôle dans tes réponses si c'est pertinent." if req.operator_name else ""
+        system = f"{persona_intro}{operator_context}\nReply in ENGLISH, clearly, structurally, and professionally."
         if kb_context:
             system += f"\n\n--- DONNÉES JPH ---\n{kb_context}"
         if action_context:
@@ -1153,3 +947,31 @@ def update_agent_assignment(assignment: AgentAssignment):
         return {"success": True, "data": res.data[0] if res.data else None}
     except Exception as e:
         return {"error": str(e)}
+
+@router.post("/agent/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    """Transcribe audio using Groq Whisper API for robust wake word detection and speech-to-text."""
+    if not HAS_GROQ:
+        return JSONResponse(status_code=500, content={"error": "Groq is not installed."})
+    
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return JSONResponse(status_code=500, content={"error": "GROQ_API_KEY environment variable is missing."})
+        
+    try:
+        client = Groq(api_key=api_key)
+        audio_content = await file.read()
+        
+        filename = file.filename if file.filename else "audio.webm"
+        if not filename.endswith(('.webm', '.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav')):
+            filename = "audio.webm"
+            
+        transcription = client.audio.transcriptions.create(
+            file=(filename, audio_content),
+            model="whisper-large-v3-turbo",
+            response_format="json"
+        )
+        return {"text": transcription.text}
+    except Exception as e:
+        print(f"[Whisper API Error] {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})

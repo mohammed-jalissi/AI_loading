@@ -33,7 +33,11 @@ def find_combos(qualite, stocks, axes_health=None):
                 # ML health impact: reduce cadence if anomaly detected
                 if axes_health and axe in axes_health:
                     res = axes_health[axe]
-                    if res.get('is_anomaly'):
+                    is_breakdown = res.get('is_anomaly') and res.get('probability', 0) == 1.0
+                    if is_breakdown:
+                        if res.get('duration', 999) >= 48:
+                            continue  # Axe is completely broken (panne permanente)
+                    elif res.get('is_anomaly'):
                         cadence = cadence * 0.5
                     elif res.get('probability', 0) > 0.3:
                         cadence = cadence * 0.8
@@ -233,6 +237,19 @@ def run_scheduler(navires, T=48, lambda_pen=0.8, meteo=None, stocks_init=None,
                 apf = axe_p_free.get(axe_p_map.get(quai_sel, ""), 0)
                 # Le candidat doit respecter : disponibilité de l'axe, de l'axe P, et fin du lot précédent
                 start_cand = max(h_lot_earliest, af, apf)
+                
+                # Handling temporary breakdowns
+                if axes_health and a in axes_health:
+                    res = axes_health[a]
+                    is_breakdown = res.get('is_anomaly') and res.get('probability', 0) == 1.0
+                    if is_breakdown:
+                        bd_start = res.get('start', 0)
+                        bd_duration = res.get('duration', 999)
+                        if bd_duration < 48:
+                            bd_end = bd_start + bd_duration
+                            lot_duration = int(td / max(1, combo["cadence"])) + 1
+                            if start_cand < bd_end and start_cand + lot_duration > bd_start:
+                                start_cand = max(start_cand, bd_end)
 
                 needed_tail = T_FINITION + T_CTE_FC
                 if start_cand + needed_tail < T and start_cand < best_start_cand:

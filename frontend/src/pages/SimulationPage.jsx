@@ -52,7 +52,7 @@ export default function SimulationPage({ baseData, params, meteo, healthData, on
     if (type === 'VESSEL_DELAY') {
       setEvents([...events, { id: Date.now(), type, target: vessels[0]?.nom || '', delay: 10 }]);
     } else if (type === 'AXIS_BREAKDOWN') {
-      setEvents([...events, { id: Date.now(), type, target: 'Axe1' }]);
+      setEvents([...events, { id: Date.now(), type, target: 'Axe1', start: 0, duration: 12 }]);
     } else if (type === 'WEATHER_ALERT') {
       setEvents([...events, { id: Date.now(), type, target: '2N', start: 0, duration: 6 }]);
     } else if (type === 'QUALITY_SHORTAGE') {
@@ -82,7 +82,7 @@ export default function SimulationPage({ baseData, params, meteo, healthData, on
           const target = clonedVessels.find(v => v.nom === ev.target);
           if (target) target.arrivee += Number(ev.delay);
         } else if (ev.type === 'AXIS_BREAKDOWN') {
-          clonedHealth[ev.target] = { probability: 1.0, is_anomaly: 1, insight: "SIMULATED BREAKDOWN INJECTION" };
+          clonedHealth[ev.target] = { probability: 1.0, is_anomaly: 1, insight: "SIMULATED BREAKDOWN INJECTION", start: Number(ev.start || 0), duration: Number(ev.duration || 999) };
         }
       });
 
@@ -114,33 +114,11 @@ export default function SimulationPage({ baseData, params, meteo, healthData, on
     }
   };
 
-  // Helper to compute Demurrage Financial Impact
-  // Formula: total demurrage = sum(wait_time_of_vessel * vessel_demurrage_rate)
-  // Since we don't have per-vessel exact wait time in metrics right now without complex parsing of all_lots,
-  // we will estimate: wait_diff * avg_demurrage_rate or just map the vessels.
-  const computeFinancialImpact = (lotsData, originalVessels) => {
-    let cost = 0;
-    // Map vessel name to demurrage rate
-    const rates = {};
-    originalVessels.forEach(v => rates[v.nom] = v.demurrage_rate || 1000);
-    
-    if (lotsData) {
-      lotsData.forEach(lot => {
-        if (lot.scheduled && lot.attente > 0) {
-           const rate = rates[lot.navire] || 1000;
-           // The backend lot.attente is total wait time for that lot.
-           cost += (lot.attente * rate);
-        }
-      });
-    }
-    return cost;
-  };
-
   const baseMetrics = baseData?.metrics || {};
   const simMetrics = simData?.metrics || {};
 
-  const baseCost = baseData ? computeFinancialImpact(baseData.all_lots, vessels) : 0;
-  const simCost = simData ? computeFinancialImpact(simData.all_lots, vessels) : 0;
+  const baseCost = baseMetrics.total_demurrage_cost || 0;
+  const simCost = simMetrics.total_demurrage_cost || 0;
   
   const deltaWait = (simMetrics.total_attente || 0) - (baseMetrics.total_attente || 0);
   const deltaCongestion = (simMetrics.quay_occupancy || 0) - (baseMetrics.quay_occupancy || 0);
@@ -203,16 +181,24 @@ export default function SimulationPage({ baseData, params, meteo, healthData, on
                 </>
               )}
               {ev.type === 'AXIS_BREAKDOWN' && (
-                <select style={S.select} value={ev.target} onChange={e => updateEvent(ev.id, 'target', e.target.value)}>
-                  <optgroup label="Axes Logiques (Généraux)">
-                    <option value="Axe1">Axe 1 (Main JLN)</option>
-                    <option value="Axe2">Axe 2 (Secours JLN)</option>
-                  </optgroup>
-                  <optgroup label="Convoyeurs">
-                    <option value="TB1">TB1</option>
-                    <option value="TB2">TB2</option>
-                  </optgroup>
-                </select>
+                <>
+                  <select style={{...S.select, marginBottom: '8px'}} value={ev.target} onChange={e => updateEvent(ev.id, 'target', e.target.value)}>
+                    <optgroup label="Axes Logiques (Généraux)">
+                      <option value="Axe1">Axe 1 (Main JLN)</option>
+                      <option value="Axe2">Axe 2 (Secours JLN)</option>
+                      <option value="Axe3">Axe 3 (Extension JLN)</option>
+                    </optgroup>
+                    <optgroup label="Convoyeurs">
+                      <option value="TB1">TB1</option>
+                      <option value="TB2">TB2</option>
+                      <option value="TB3">TB3</option>
+                    </optgroup>
+                  </select>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <input type="number" style={S.input} value={ev.start !== undefined ? ev.start : 0} onChange={e => updateEvent(ev.id, 'start', e.target.value)} placeholder="Début (H)" title="Heure de début" />
+                    <input type="number" style={S.input} value={ev.duration !== undefined ? ev.duration : 12} onChange={e => updateEvent(ev.id, 'duration', e.target.value)} placeholder="Durée (H)" title="Durée en heures" />
+                  </div>
+                </>
               )}
               {ev.type === 'WEATHER_ALERT' && (
                 <>

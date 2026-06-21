@@ -94,11 +94,12 @@ export const api = {
   },
 
   // Streaming Chat (SSE)
-  chatStream: (data) =>
+  chatStream: (data, options = {}) =>
     fetch(`${API_BASE}/agent/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      ...options,
     }),
 
   // Feedback

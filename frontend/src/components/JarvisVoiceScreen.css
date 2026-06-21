@@ -1,0 +1,267 @@
+/* JarvisVoiceScreen.css */
+
+/* ── Root layout ── */
+.jarvis-voice-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #050505;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+.jarvis-split-screen {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Left Pane (Agent Visualization) ── */
+.jarvis-left-pane {
+  flex: 1;
+  background: radial-gradient(circle at center, #111 0%, #050505 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Centered layout */
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.jarvis-orb-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── The Orb ── */
+.jarvis-orb {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  z-index: 10;
+  transition: all 0.5s ease;
+  --base-r: var(--agent-r, 139);
+  --base-g: var(--agent-g, 92);
+  --base-b: var(--agent-b, 246);
+  --glow-color: rgba(var(--base-r), var(--base-g), var(--base-b), 0.6);
+  --glow-strong: rgba(var(--base-r), var(--base-g), var(--base-b), 0.9);
+}
+
+.jarvis-orb-inner {
+  position: absolute;
+  top: 10%; left: 10%;
+  width: 80%; height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(var(--base-r), var(--base-g), var(--base-b), 0.8) 0%, rgba(0,0,0,0.8) 80%);
+  box-shadow: inset 0 0 40px rgba(var(--base-r), var(--base-g), var(--base-b), 0.4);
+}
+
+.jarvis-orb-ring-1, .jarvis-orb-ring-2 {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.jarvis-orb-ring-1 {
+  border-top-color: rgba(var(--base-r), var(--base-g), var(--base-b), 0.8);
+  border-right-color: rgba(var(--base-r), var(--base-g), var(--base-b), 0.3);
+  animation: orb-spin-1 6s linear infinite;
+}
+
+.jarvis-orb-ring-2 {
+  width: 120%; height: 120%;
+  top: -10%; left: -10%;
+  border-bottom-color: rgba(var(--base-r), var(--base-g), var(--base-b), 0.6);
+  border-left-color: rgba(var(--base-r), var(--base-g), var(--base-b), 0.1);
+  animation: orb-spin-2 8s linear infinite reverse;
+}
+
+@keyframes orb-spin-1 { 100% { transform: rotate(360deg); } }
+@keyframes orb-spin-2 { 100% { transform: rotate(360deg); } }
+
+/* States */
+.orb-listening {
+  box-shadow: 0 0 60px var(--glow-color);
+  transform: scale(1.05);
+}
+.orb-listening .jarvis-orb-ring-1 { animation-duration: 4s; }
+
+.orb-speaking {
+  box-shadow: 0 0 80px var(--glow-strong);
+  transform: scale(1.1);
+}
+.orb-speaking .jarvis-orb-inner {
+  background: radial-gradient(circle at 40% 40%, rgba(var(--base-r), var(--base-g), var(--base-b), 1) 0%, rgba(0,0,0,0.5) 80%);
+}
+.orb-speaking .jarvis-orb-ring-1 { animation-duration: 2s; }
+.orb-speaking .jarvis-orb-ring-2 { animation-duration: 3s; }
+
+.orb-processing {
+  box-shadow: 0 0 30px var(--glow-color);
+  animation: pulse-processing 1.5s infinite;
+}
+@keyframes pulse-processing {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.orb-standby {
+  box-shadow: 0 0 20px rgba(var(--base-r), var(--base-g), var(--base-b), 0.2);
+  transform: scale(0.9);
+  opacity: 0.6;
+}
+
+.jarvis-visualizer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  border-radius: 50%;
+}
+
+.jarvis-agent-id {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.jarvis-agent-role {
+  color: #888;
+  font-size: 14px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+
+.jarvis-status-text {
+  color: #555;
+  font-size: 11px;
+  letter-spacing: 8px;
+  font-weight: bold;
+}
+
+.standby-text {
+  color: #444 !important;
+  text-shadow: none !important;
+}
+
+/* ── Right Pane (Conversation & Results) ── */
+.jarvis-right-pane {
+  flex: 1;
+  background-color: #080808;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.jarvis-close-btn {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+.jarvis-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.jarvis-transcript-area {
+  flex: 0 0 auto;
+  padding: 80px 60px 40px 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.jarvis-transcript-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.jarvis-user-said {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 2px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.jarvis-user-transcript {
+  font-size: 24px;
+  color: #fff;
+  line-height: 1.4;
+  margin-bottom: 24px;
+}
+
+.jarvis-agent-reply-box {
+  border-left: 2px solid var(--accent-purple, #8b5cf6);
+  padding-left: 16px;
+}
+
+.jarvis-agent-reply-label {
+  font-size: 10px;
+  color: var(--accent-purple, #8b5cf6);
+  letter-spacing: 2px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.jarvis-agent-reply-text {
+  font-size: 18px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+/* ── Widget Area ── */
+.jarvis-widget-area {
+  flex: 1;
+  padding: 40px 60px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+.jarvis-widget-area::-webkit-scrollbar {
+  width: 6px;
+}
+.jarvis-widget-area::-webkit-scrollbar-track {
+  background: #050505;
+}
+.jarvis-widget-area::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+/* Extracted Widget Styles */
+.jarvis-result-widget {
+  animation: slide-up 0.3s ease forwards;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

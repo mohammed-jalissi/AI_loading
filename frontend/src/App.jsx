@@ -18,6 +18,7 @@ import TopologyPage from './pages/TopologyPage';
 import DataIngestion from './pages/DataIngestion';
 import SimulationPage from './pages/SimulationPage';
 import Dat03Feed from './pages/Dat03Feed';
+import Login from './pages/Login';
 
 const TABS = [
   { id: 'gantt', label: 'GANTT_PLAN' },
@@ -36,6 +37,7 @@ const TABS = [
 ];
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('gantt');
   const [mode, setMode] = useState('standard'); // 'standard' or 'ultra'
   const [themeMode, setThemeMode] = useState('dark'); // Default to dark mode
@@ -145,6 +147,14 @@ export default function App() {
       '--sidebar-border': `color-mix(in srgb, ${themeColor} 70%, black)`,
     } : {})
   } : undefined;
+
+  if (!isAuthenticated) {
+    return (
+      <div data-theme={themeMode} style={customStyles}>
+        <Login onLogin={() => setIsAuthenticated(true)} themeColor={themeColor} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout" data-theme={themeMode} style={customStyles}>

@@ -194,86 +194,81 @@ async def upload_arrets(file: UploadFile = File(...)):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 2. Upload — KPI Axes 2025 (multi-feuilles)
+# 2. Upload — TRG par axe 2025
 # ═══════════════════════════════════════════════════════════════════════════
 
-@router.post("/dat03/upload_kpi_axes")
-async def upload_kpi_axes(file: UploadFile = File(...)):
+@router.post("/dat03/upload_trg_axes")
+async def upload_trg_axes(file: UploadFile = File(...)):
     sb = get_client() if get_client else None
     if not sb:
         raise HTTPException(status_code=500, detail="Supabase non configuré")
 
     try:
         contents = await file.read()
-        xl = pd.ExcelFile(io.BytesIO(contents), engine="openpyxl")
+        df = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+        df = clean_df(df)
 
-        # Indicateurs de section à ignorer (headers visuels Excel, pas des KPI)
-        SECTION_HEADERS = {"objectif trimestriel", "semaine", ""}
+        col = {
+            "date": find_col(df, "date"),
+            "semaine": find_col(df, "semaine"),
+            "axe1": find_col(df, "axe 1"),
+            "axe2": find_col(df, "axe 2"),
+            "axe3": find_col(df, "axe 3"),
+            "axe4": find_col(df, "axe 4"),
+            "axe5": find_col(df, "axe 5"),
+            "axe6": find_col(df, "axe 6"),
+            "total_charge": find_col(df, "total chargé", "total charge", "total_charge", "total")
+        }
+
+        required = ["date", "semaine"]
+        missing = [k for k in required if not col.get(k)]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Colonnes manquantes: {missing}. Trouvées: {list(df.columns)}")
+
+        key_cols = [col[k] for k in required if col.get(k)]
+        df.dropna(subset=key_cols, inplace=True)
 
         rows = []
-        sheets_processed = []
-        sheets_skipped = []
+        skipped = 0
 
-        for sheet_name in xl.sheet_names:
-            df = xl.parse(sheet_name, header=0)
-            df.dropna(how="all", axis=1, inplace=True)
-            df.dropna(how="all", axis=0, inplace=True)
-
-            if df.empty or len(df.columns) < 2:
-                sheets_skipped.append(str(sheet_name))
+        for _, row in df.iterrows():
+            date_val = safe_str(row.get(col["date"]))
+            semaine_val = safe_int(row.get(col["semaine"]))
+            if not date_val or not semaine_val:
+                skipped += 1
                 continue
 
-            axe_nom = str(sheet_name).strip()
-            sheets_processed.append(axe_nom)
-
-            # Col A = nom indicateur, reste = colonnes semaines (Réalisé 2023, YTD, 1..52)
-            ind_col      = df.columns[0]
-            semaine_cols = df.columns[1:]
-
-            for _, row in df.iterrows():
-                indicateur = safe_str(row.get(ind_col))
-                if not indicateur:
-                    continue
-                if indicateur.lower().strip() in SECTION_HEADERS:
-                    continue
-
-                for sem_col in semaine_cols:
-                    sem_str = str(sem_col).strip()
-                    val     = row.get(sem_col)
-
-                    if val is None or (isinstance(val, float) and pd.isna(val)):
-                        continue
-
-                    val_float = safe_float(val)
-                    if val_float is None:
-                        continue
-
-                    rows.append({
-                        "hash_id":    make_hash(axe_nom, indicateur, sem_str),
-                        "axe_nom":    axe_nom,
-                        "indicateur": indicateur,
-                        "semaine":    sem_str,
-                        "valeur":     val_float,
-                    })
+            rows.append({
+                "hash_id": make_hash(date_val, semaine_val),
+                "date": date_val[:10] if len(date_val) >= 10 else date_val,
+                "semaine": semaine_val,
+                "axe_1": safe_float(row.get(col["axe1"])) if col.get("axe1") else None,
+                "axe_2": safe_float(row.get(col["axe2"])) if col.get("axe2") else None,
+                "axe_3": safe_float(row.get(col["axe3"])) if col.get("axe3") else None,
+                "axe_4": safe_float(row.get(col["axe4"])) if col.get("axe4") else None,
+                "axe_5": safe_float(row.get(col["axe5"])) if col.get("axe5") else None,
+                "axe_6": safe_float(row.get(col["axe6"])) if col.get("axe6") else None,
+                "total_charge": safe_float(row.get(col["total_charge"])) if col.get("total_charge") else None,
+            })
 
         if not rows:
-            return {"status": "ok", "message": "Aucune donnée KPI valide", "inserted": 0, "axes_traites": sheets_processed}
+            return {"status": "ok", "message": "Aucune ligne valide", "inserted": 0, "skipped": skipped}
 
-        inserted = upsert_batch(sb, "kpi_axes_2025", rows)
+        inserted = upsert_batch(sb, "trg_axes_2025", rows)
 
         return {
             "status": "ok",
-            "message": f"{inserted} enregistrements KPI insérés / mis à jour",
-            "axes_traites": sheets_processed,
-            "axes_ignores": sheets_skipped,
+            "message": f"{inserted} lignes TRG insérées / mises à jour",
             "inserted": inserted,
-            "total_records": len(rows),
+            "skipped": skipped,
+            "total_lignes": len(df),
+            "colonnes_detectees": {k: v for k, v in col.items() if v},
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur traitement KPI Axes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur traitement TRG Axes: {str(e)}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -396,15 +391,15 @@ async def upload_export(file: UploadFile = File(...)):
 async def get_dat03_stats():
     sb = get_client() if get_client else None
     if not sb:
-        return {"arrets": 0, "kpi": 0, "export": 0, "error": "Supabase non configuré"}
+        return {"arrets": 0, "trg": 0, "export": 0, "error": "Supabase non configuré"}
     try:
         r_arrets = sb.table("arrets_2025").select("id", count="exact").execute()
-        r_kpi    = sb.table("kpi_axes_2025").select("id", count="exact").execute()
+        r_trg    = sb.table("trg_axes_2025").select("id", count="exact").execute()
         r_export = sb.table("export_2025").select("id", count="exact").execute()
         return {
             "arrets": r_arrets.count or 0,
-            "kpi":    r_kpi.count or 0,
+            "trg":    r_trg.count or 0,
             "export": r_export.count or 0,
         }
     except Exception as e:
-        return {"arrets": 0, "kpi": 0, "export": 0, "error": str(e)}
+        return {"arrets": 0, "trg": 0, "export": 0, "error": str(e)}
